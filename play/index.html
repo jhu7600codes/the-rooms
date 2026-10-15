@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
+<title>The ROOMS</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="index.icon.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="The ROOMS">
+<meta name="theme-color" content="#000000">
+<style>
+:root { --bg: #050505; --ink: #ece6d8; --dim: #8a847a; --warn: #ff5a48; --bar: #f2d966; color-scheme: dark; }
+html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); }
+body { overflow: hidden; touch-action: none; overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+[hidden] { display: none !important; }
+#canvas { display: block; position: fixed; inset: 0; width: 100%; height: 100%; }
+#canvas:focus { outline: none; }
+.screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: var(--bg); box-sizing: border-box; }
+.logo { width: min(420px, 80vw); max-height: 28vh; object-fit: contain; }
+.warn { color: var(--warn); font-weight: 700; font-size: 15px; letter-spacing: 0.03em; }
+.note { color: var(--dim); font-size: 13px; max-width: 34em; }
+#bar { width: min(320px, 80vw); height: 6px; background: #1c1b18; border-radius: 3px; overflow: hidden; }
+#bar > div { width: 0%; height: 100%; background: var(--bar); transition: width .2s; }
+#pct { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+#err { color: var(--warn); font-size: 14px; max-width: 34em; white-space: pre-wrap; }
+#install ol { text-align: left; margin: 0; padding-left: 1.4em; display: grid; gap: 10px; font-size: 16px; max-width: 22em; }
+#install b { color: var(--bar); }
+.share { display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -0.15em; }
+#install a { color: var(--dim); font-size: 13px; }
+#rotate { z-index: 50; display: none; }
+@media (orientation: portrait) and (pointer: coarse) { #rotate.on { display: flex; } }
+#rotate svg { width: 64px; height: 64px; animation: turn 2s ease-in-out infinite; }
+@keyframes turn { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+@media (prefers-reduced-motion: reduce) { #rotate svg { animation: none; } }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<div id="status" class="screen">
+  <img class="logo" src="logo.png" alt="The ROOMS">
+  <div class="warn">THIS USES DOORS AND ROOMS REVISITED ASSETS!</div>
+  <div id="bar"><div></div></div>
+  <div id="pct">loading 0%</div>
+  <div id="err" hidden></div>
+  <div class="note">unofficial fan game. credit: the doors team and the rooms: revisited team. not affiliated with roblox. the first load is about 70 mb, after that it works offline.</div>
+</div>
+
+<div id="install" class="screen" hidden>
+  <img class="logo" src="logo.png" alt="The ROOMS">
+  <div class="warn">add it to your home screen to play</div>
+  <ol>
+    <li>tap the share button <svg class="share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg> at the bottom of safari</li>
+    <li>scroll down and tap <b>add to home screen</b></li>
+    <li>open <b>The ROOMS</b> from your home screen</li>
+  </ol>
+  <div class="note">it runs fullscreen from there, with sound, and works offline after the first load.</div>
+  <a href="#" id="anyway">play in safari anyway</a>
+</div>
+
+<div id="rotate" class="screen">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>
+  <div>turn your phone sideways</div>
+</div>
+
+<script>
+// ---- sound: wake up every audio context on the first touch, and on ios play through the mute switch
+(function () {
+  const ctxs = [];
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (AC) {
+    class Tracked extends AC { constructor(...a) { super(...a); ctxs.push(this); } }
+    window.AudioContext = Tracked;
+    window.webkitAudioContext = Tracked;
+  }
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
+  // a silent looping <audio> puts ios into "playback" mode, so web audio isn't muted by the ring switch
+  let silent = null;
+  function silentWav() {
+    const n = 8000, buf = new ArrayBuffer(44 + n), v = new DataView(buf);
+    const s = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+    s(0, "RIFF"); v.setUint32(4, 36 + n, true); s(8, "WAVE"); s(12, "fmt "); v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 8000, true);
+    v.setUint16(32, 1, true); v.setUint16(34, 8, true); s(36, "data"); v.setUint32(40, n, true);
+    for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+    return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+  }
+  function unlock() {
+    for (const c of ctxs) if (c.state !== "running" && c.state !== "closed") c.resume().catch(() => {});
+    if (!silent) {
+      silent = document.createElement("audio");
+      silent.src = silentWav(); silent.loop = true; silent.setAttribute("playsinline", "");
+      silent.play().catch(() => { silent = null; });
+    }
+  }
+  for (const ev of ["touchend", "pointerup", "mousedown", "keydown", "click"]) window.addEventListener(ev, unlock, { capture: true, passive: true });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) for (const c of ctxs) if (c.state === "suspended") c.resume().catch(() => {}); });
+})();
+
+// ---- fullscreen + landscape on android/desktop browsers (ios only does this from the home screen)
+const roomsStandalone = navigator.standalone === true || matchMedia("(display-mode: standalone), (display-mode: fullscreen)").matches;
+function goFull() {
+  if (roomsStandalone || document.fullscreenElement) return;
+  const el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (!req) return;
+  try {
+    const p = req.call(el, { navigationUI: "hide" });
+    if (p && p.then) p.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock("landscape").catch(() => {})).catch(() => {});
+  } catch (e) {}
+}
+if (matchMedia("(pointer: coarse)").matches) window.addEventListener("pointerup", goFull, { capture: true });
+
+// ---- offline cache
+// on the very first visit, wait (up to 4s) until the cache worker is in charge, so the big files get saved while they load
+const roomsSW = new Promise((done) => {
+  if (!("serviceWorker" in navigator) || location.protocol === "file:") return done();
+  if (navigator.serviceWorker.controller) { navigator.serviceWorker.register("sw.js").catch(() => {}); return done(); }
+  setTimeout(done, 4000);
+  navigator.serviceWorker.addEventListener("controllerchange", done);
+  navigator.serviceWorker.register("sw.js").catch(done);
+});
+
+// ---- ios in safari: show the "add to home screen" screen instead of the game
+const roomsIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const roomsGate = roomsIOS && !roomsStandalone && !location.hash.includes("safari");
+</script>
+<script src="index.js"></script>
+<script>
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":24040368,"index.wasm":43699190},"focusCanvas":true,"gdextensionLibs":[]};
+(function () {
+  const status = document.getElementById("status");
+  const install = document.getElementById("install");
+  document.getElementById("rotate").classList.add("on");
+  async function start() {
+    await roomsSW;
+    install.hidden = true;
+    status.hidden = false;
+    const engine = new Engine(GODOT_CONFIG);
+    const fill = document.querySelector("#bar > div");
+    const pct = document.getElementById("pct");
+    const err = document.getElementById("err");
+    const fail = (e) => { console.error(e); err.hidden = false; err.textContent = "couldn't start: " + (e && e.message ? e.message : e); };
+    let last = Date.now();
+    const watch = setInterval(() => {
+      if (!document.body.contains(status)) { clearInterval(watch); return; }
+      if (Date.now() - last > 45000) { err.hidden = false; err.textContent = "still loading... if it stays stuck, close it and open it again."; }
+    }, 5000);
+    const missing = Engine.getMissingFeatures({ threads: false });
+    if (missing.length) { fail(new Error("this browser is missing: " + missing.join(", "))); return; }
+    engine.startGame({
+      onProgress: (cur, total) => {
+        last = Date.now();
+        if (cur > 0 && total > 0) { const p = Math.min(100, Math.round(cur / total * 100)); fill.style.width = p + "%"; pct.textContent = "loading " + p + "%"; }
+      },
+    }).then(() => status.remove(), fail);
+  }
+  if (roomsGate) {
+    status.hidden = true;
+    install.hidden = false;
+    document.getElementById("anyway").addEventListener("click", (e) => { e.preventDefault(); start(); });
+  } else {
+    start();
+  }
+}());
+</script>
+</body>
+</html>

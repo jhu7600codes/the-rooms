@@ -2,64 +2,233 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="The ROOMS: a fan horror game in an endless office. play it free in your browser.">
+<meta property="og:title" content="The ROOMS">
+<meta property="og:description" content="an endless office. a thousand doors. find a locker.">
+<meta property="og:image" content="img/logo.png">
+<link rel="icon" href="play/index.icon.png">
+<meta name="theme-color" content="#0d0c0e">
 <title>The ROOMS</title>
-<link rel="icon" href="index.icon.png">
-<link rel="apple-touch-icon" href="index.apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;600&family=Work+Sans:wght@400;500;600&display=swap">
 <style>
-/* one full-screen canvas; a quiet loading card on black while the game downloads */
-:root { --bg: #050505; --ink: #ece6d8; --dim: #8a847a; --warn: #ff5a48; --bar: #f2d966; color-scheme: dark; }
-html, body { height: 100%; }
-body { background: var(--bg); color: var(--ink); overflow: hidden; touch-action: none; margin: 0; }
-#canvas { display: block; width: 100%; height: 100%; }
-#canvas:focus { outline: none; }
-#status { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  background: var(--bg); text-align: center; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
-#logo { width: min(420px, 86vw); height: auto; }
-#status h1 { margin: 0; font-size: clamp(28px, 7vw, 46px); letter-spacing: 0.04em; font-weight: 800; text-wrap: balance; }
-#status .warn { color: var(--warn); font-weight: 700; font-size: 15px; letter-spacing: 0.03em; }
-#status .note { color: var(--dim); font-size: 13px; max-width: 34em; }
-#bar { width: min(320px, 80vw); height: 6px; background: #1c1b18; border-radius: 3px; overflow: hidden; }
-#bar > div { width: 0%; height: 100%; background: var(--bar); transition: width .2s; }
-#pct { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
-#err { color: var(--warn); font-size: 14px; max-width: 34em; white-space: pre-wrap; }
+/* layout: one long corridor. each section is a "room" behind a door plate (a-000, a-050...), red carpet stripe runs down the left */
+:root{
+  --bg:#0d0c0e; --wall:#17151a; --wall2:#201d23; --fg:#ece6dc; --dim:#9c948a;
+  --carpet:#a3161c; --carpet2:#6e0e12; --brass:#d8b25a; --fluor:#e9f1ea;
+  --display:"Archivo Black",Impact,"Arial Black",sans-serif;
+  --body:"Work Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.6;margin:0}
+a{color:var(--brass)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--brass);outline-offset:3px}
+.wrap{max-width:1040px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* hero */
+.hero{position:relative;overflow:hidden;background:
+  radial-gradient(ellipse 60% 40% at 50% 0%,rgba(233,241,234,.16),transparent 70%),
+  linear-gradient(var(--bg),var(--wall));}
+.hero .wrap{padding-block:56px 48px;display:grid;gap:24px;justify-items:center;text-align:center}
+.lamp{width:min(340px,70%);height:6px;border-radius:3px;background:var(--fluor);box-shadow:0 0 40px 10px rgba(233,241,234,.35);animation:flick 7s infinite}
+@keyframes flick{0%,91%,100%{opacity:1}92%{opacity:.2}93%{opacity:1}95%{opacity:.4}96%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.lamp{animation:none}}
+.logo{width:min(640px,100%);height:auto;filter:drop-shadow(0 18px 30px rgba(0,0,0,.6))}
+.tag{font-size:clamp(17px,2.4vw,21px);max-width:44ch;color:var(--fg);margin:0;text-wrap:balance}
+.cta{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.btn{font-family:var(--mono);font-weight:600;font-size:14px;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;padding:13px 20px;border-radius:3px;border:1px solid var(--brass);color:var(--brass);background:transparent}
+.btn.main{background:var(--carpet);border-color:var(--carpet);color:var(--fg)}
+.btn:hover{filter:brightness(1.15)}
+.plats{font-family:var(--mono);font-size:13px;color:var(--dim);letter-spacing:.04em}
+.warn{border-top:2px solid var(--carpet);border-bottom:2px solid var(--carpet);background:#150a0b}
+.warn .wrap{padding-block:12px;font-family:var(--mono);font-size:13px;color:#ff6b6b;text-align:center;letter-spacing:.04em}
+
+/* corridor */
+.corridor{position:relative}
+.corridor::before{content:"";position:absolute;left:0;top:0;bottom:0;width:10px;background:repeating-linear-gradient(var(--carpet) 0 40px,var(--carpet2) 40px 44px)}
+section{padding-block:56px}
+section+section{border-top:1px solid var(--wall2)}
+.plate{display:inline-block;font-family:var(--mono);font-weight:600;font-size:13px;letter-spacing:.12em;color:#1a1408;background:var(--brass);padding:3px 10px;border-radius:2px;margin-bottom:14px}
+h2{font-family:var(--display);font-weight:400;font-size:clamp(28px,4.4vw,42px);line-height:1.05;margin:0 0 16px;text-transform:uppercase;letter-spacing:.01em;text-wrap:balance}
+h3{font-family:var(--display);font-weight:400;font-size:19px;margin:0 0 6px;text-transform:uppercase;letter-spacing:.02em}
+p{margin:0 0 14px;max-width:65ch}
+.lead{font-size:18px;color:var(--fg)}
+.muted{color:var(--dim)}
+
+/* shots */
+.shots{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:24px}
+.shots figure{margin:0;grid-column:span 2;background:var(--wall);border:1px solid var(--wall2)}
+.shots figure.wide{grid-column:span 3}
+.shots figure.solo{grid-column:2 / span 4}
+.shots img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}
+.shots figcaption{font-family:var(--mono);font-size:12px;color:var(--dim);padding:8px 10px}
+@media (max-width:700px){.shots{grid-template-columns:1fr 1fr}.shots figure,.shots figure.wide{grid-column:span 1}.shots figure.big,.shots figure.solo{grid-column:span 2}}
+
+/* floors */
+.floors{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:20px}
+.floor{background:var(--wall);border:1px solid var(--wall2);padding:20px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.floor .range{font-family:var(--mono);font-size:13px;color:var(--brass)}
+.floor p{font-size:15px;margin:0}
+@media (max-width:820px){.floors{grid-template-columns:1fr}}
+
+/* entities */
+.ents{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1px;background:var(--wall2);border:1px solid var(--wall2);margin-top:20px}
+.ent{background:var(--bg);padding:18px;display:grid;gap:6px;align-content:start}
+.ent .id{font-family:var(--mono);font-weight:600;font-size:15px;color:var(--fg)}
+.ent .from{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.ent p{font-size:14px;margin:0}
+.ent .do{font-family:var(--mono);font-size:12px;color:var(--carpet);color:#ff7b7b}
+
+/* door log */
+.log{list-style:none;padding:0;margin:20px 0 0;display:grid;gap:0}
+.log li{display:grid;grid-template-columns:90px minmax(0,1fr);gap:16px;padding:14px 0;border-bottom:1px dashed var(--wall2)}
+.log .n{font-family:var(--mono);font-weight:600;color:var(--brass);font-variant-numeric:tabular-nums}
+.log b{font-weight:600}
+
+/* features */
+.feats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 32px;margin-top:20px}
+.feats div{min-width:0}
+.feats p{font-size:15px;margin:0}
+@media (max-width:700px){.feats{grid-template-columns:1fr}}
+
+/* controls */
+.tbl{overflow-x:auto;margin-top:20px;border:1px solid var(--wall2)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:14px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--wall2);vertical-align:top}
+th{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:600;background:var(--wall)}
+td:first-child{color:var(--brass);font-family:var(--mono);font-size:13px;white-space:nowrap}
+kbd{font-family:var(--mono);font-size:12px;background:var(--wall2);padding:1px 6px;border-radius:2px}
+
+footer{border-top:2px solid var(--carpet);background:var(--wall)}
+footer .wrap{padding-block:32px;font-size:14px;color:var(--dim);display:grid;gap:10px}
+footer b{color:var(--fg)}
 </style>
 </head>
 <body>
-<canvas id="canvas">Your browser does not support the canvas tag.</canvas>
-<div id="status">
-  <img id="logo" src="logo.png" alt="The ROOMS" width="900" height="344">
-  <div class="warn">THIS USES DOORS AND ROOMS REVISITED ASSETS!</div>
-  <div id="bar"><div></div></div>
-  <div id="pct">loading 0%</div>
-  <div id="err" hidden></div>
-  <div class="note">unofficial fan game. credit: the doors team and the rooms: revisited team. not affiliated with roblox. the first load is about 70 mb, best on wifi.</div>
-</div>
-<script src="index.js"></script>
-<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":24040368,"index.wasm":43699190},"focusCanvas":true,"gdextensionLibs":[]};
-const engine = new Engine(GODOT_CONFIG);
-(function () {
-  const status = document.getElementById("status");
-  const fill = document.querySelector("#bar > div");
-  const pct = document.getElementById("pct");
-  const err = document.getElementById("err");
-  const fail = (e) => { console.error(e); err.hidden = false; err.textContent = "couldn't start: " + (e && e.message ? e.message : e); };
-  let last = Date.now();
-  const watch = setInterval(() => {
-    if (!document.body.contains(status)) { clearInterval(watch); return; }
-    if (Date.now() - last > 45000) { err.hidden = false; err.textContent = "still loading... if it stays stuck, close this and open it again."; }
-  }, 5000);
-  const missing = Engine.getMissingFeatures({ threads: false });
-  if (missing.length) { fail(new Error("this browser is missing: " + missing.join(", "))); return; }
-  engine.startGame({
-    onProgress: (cur, total) => {
-      last = Date.now();
-      if (cur > 0 && total > 0) { const p = Math.min(100, Math.round(cur / total * 100)); fill.style.width = p + "%"; pct.textContent = "loading " + p + "%"; }
-    },
-  }).then(() => status.remove(), fail);
-}());
-</script>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="lamp" aria-hidden="true"></div>
+    <img class="logo" src="img/logo.png" alt="The ROOMS" width="900" height="344">
+    <p class="tag">an endless office. a thousand doors. something is always coming down the hallway, so find a locker.</p>
+    <div class="cta">
+      <a class="btn main" href="play/">play in browser</a>
+      <a class="btn" href="#rooms">what's inside</a>
+    </div>
+    <div class="plats">plays in your browser, on phones too · on iphone, add it to your home screen · v1.30.0</div>
+  </div>
+</header>
+<div class="warn"><div class="wrap">this uses doors and rooms revisited assets!</div></div>
+
+<main class="corridor">
+  <section id="about"><div class="wrap">
+    <span class="plate">A-000</span>
+    <h2>you start on your first day</h2>
+    <p class="lead">the ROOMS is a first person horror game set in the offices of miles, the company you work for. the lobby door locks behind you, and the only way out is forward: through room after generated room, from a-000 all the way to a-1000.</p>
+    <p class="muted">it's a fan game inspired by nicorocks5555's roblox game rooms, the rooms floor in lsplash's doors and rooms: revisited. made in godot 4 by jhu.</p>
+    <div class="shots">
+      <figure class="wide big"><img src="img/web_menu.jpg" alt="the title screen with the logo and menu over a hallway" loading="lazy"><figcaption>the title screen, running in a browser</figcaption></figure>
+      <figure class="wide big"><img src="img/s_lobby.jpg" alt="the a-000 lobby with red carpet and couches" loading="lazy"><figcaption>a-000, the lobby</figcaption></figure>
+      <figure><img src="img/s_locker.jpg" alt="a long locker room" loading="lazy"><figcaption>locker rooms. remember where they are</figcaption></figure>
+      <figure><img src="img/s_tall.jpg" alt="the tall room with two staircases and a catwalk bridge" loading="lazy"><figcaption>the tall room</figcaption></figure>
+      <figure><img src="img/s_dark.jpg" alt="a dark hallway in the flashlight beam" loading="lazy"><figcaption>dark from a-150 on</figcaption></figure>
+    </div>
+  </div></section>
+
+  <section id="floors"><div class="wrap">
+    <span class="plate">FLOORS</span>
+    <h2>three floors, pick one</h2>
+    <div class="floors">
+      <div class="floor"><span class="range">a-000 to a-1000</span><h3>the offices</h3><p>the endless office. normal until a-30, foggy after, pitch dark from a-150. lights break and flicker more the deeper you go.</p></div>
+      <div class="floor"><span class="range">w-00 to w-50</span><h3>the wires</h3><p>the maintenance floor underneath. concrete, pipes and cage lamps. flip the breakers, dodge the hanging wires, power the elevator and ride it up into the fixed office, where your coworkers really don't like being stared at.</p></div>
+      <div class="floor"><span class="range">c-01 to c-30</span><h3>the great city</h3><p>walk through the a-1000 door and you're outside at dusk, in front of the miles tower. the entities still find you out here, plus headlights and the billboard. the bus at c-30 takes you home.</p></div>
+    </div>
+    <div class="shots">
+      <figure class="wide big"><img src="img/s_wires.jpg" alt="a concrete maintenance corridor with pipes and a cage lamp" loading="lazy"><figcaption>the wires</figcaption></figure>
+      <figure class="wide big"><img src="img/s_city.jpg" alt="a city street at dusk between tall buildings" loading="lazy"><figcaption>the great city</figcaption></figure>
+    </div>
+  </div></section>
+
+  <section id="entities"><div class="wrap">
+    <span class="plate">ENTITIES</span>
+    <h2>what's in the hallway</h2>
+    <p>every entity has a warning if you know what to look for. the curious light tells you what you did wrong after you die.</p>
+    <div class="shots"><figure class="solo"><img src="img/s_a200.jpg" alt="the curious light after a death: you died to what you call a-200" loading="lazy"><figcaption>the curious light, after a-200 got me</figcaption></figure></div>
+    <div class="ents">
+      <div class="ent"><span class="id">A-60</span><span class="from">rooms</span><p>rushes from behind. the lights flash red every 4 seconds before it arrives. crackle, then hiss.</p><span class="do">hide in a locker</span></div>
+      <div class="ent"><span class="id">A-120</span><span class="from">rooms</span><p>slow, from the rooms ahead, metallic clanging. bulbs drop out of the ceiling and the room goes dark blue. it tears some lockers open.</p><span class="do">wait until the sound is gone</span></div>
+      <div class="ent"><span class="id">A-90</span><span class="from">rooms</span><p>a knock, the audio cuts out, a face and a stop sign flash on screen. any input deals 90 damage.</p><span class="do">don't touch anything</span></div>
+      <div class="ent"><span class="id">A-90B</span><span class="from">rooms</span><p>gives you 5 to 10 orders: halt or proceed. get one wrong and lose 20 to 30 health.</p><span class="do">follow the sign</span></div>
+      <div class="ent"><span class="id">A-200</span><span class="from">rooms</span><p>the happy scribble. comes from the front and rebounds about 3 times. lockers around you creak open one by one first.</p><span class="do">white = hide, purple = get out</span></div>
+      <div class="ent"><span class="id">A-60B</span><span class="from">rooms</span><p>a 2% chance at a-505. bounces back and forth with boss music for 20 doors while you sprint at double speed.</p><span class="do">run</span></div>
+      <div class="ent"><span class="id">A-70</span><span class="from">rooms: revisited</span><p>the locker mimic. from a-035 a locker can be fake, with a faint face on its door.</p><span class="do">check the door before you hide</span></div>
+      <div class="ent"><span class="id">A-25</span><span class="from">rooms: revisited</span><p>a warp portal opens in the room. look away for too long and it pulls you in.</p><span class="do">keep looking at it</span></div>
+      <div class="ent"><span class="id">W-10 / W-15 / W-50</span><span class="from">the wires</span><p>a glitchy outlet that lunges out of the walls, live wires hanging from the ceiling, and a white fog with a faint face.</p><span class="do">find the breaker</span></div>
+      <div class="ent"><span class="id">THE INTROVERTS</span><span class="from">fixed office</span><p>your coworkers. stare at one and they yell "IM AN INTROVERT", then come through the rooms after you.</p><span class="do">don't stare</span></div>
+      <div class="ent"><span class="id">HEADLIGHTS</span><span class="from">the great city</span><p>a horn, then lights tear down the street.</p><span class="do">get in a phone booth</span></div>
+      <div class="ent"><span class="id">THE BILLBOARD</span><span class="from">the great city</span><p>it's up there. it wants you to look.</p><span class="do">don't look up</span></div>
+    </div>
+  </div></section>
+
+  <section id="rooms"><div class="wrap">
+    <span class="plate">DOOR LOG</span>
+    <h2>doors worth remembering</h2>
+    <p>between these, every standard room from the rooms floor and its variants: locker rooms, the tall stair room with the catwalk bridge, the projector room, e-shaped, l-shaped, storage, the break room fridge you can hide in, and more.</p>
+    <ol class="log">
+      <li><span class="n">A-000</span><span><b>the lobby.</b> couches, a skylight, and the dispenser with four buttons for your first items.</span></li>
+      <li><span class="n">A-050</span><span><b>the library.</b> find the four glowing books to get the code for the exit.</span></li>
+      <li><span class="n">A-060+</span><span><b>the cafeteria.</b> rows of tables, a serving counter, vending machines.</span></li>
+      <li><span class="n">A-100</span><span><b>the message corridor.</b> someone left a message on the wall. they didn't finish it.</span></li>
+      <li><span class="n">A-150</span><span><b>the shop.</b> spend your gold on batteries, bandages and vitamins. it's dark from here on.</span></li>
+      <li><span class="n">A-200+</span><span><b>exit doors.</b> every 50 to 100 rooms. you can hear them from the room before. leaving unlocks modifiers and the starhelp.</span></li>
+      <li><span class="n">A-240</span><span><b>the secret way down.</b> a locker pushed aside from a crack in the wall, and a management key in one of the drawers.</span></li>
+      <li><span class="n">A-505</span><span><b>maybe a-60b.</b> 2% chance.</span></li>
+      <li><span class="n">A-1000</span><span><b>the bridge.</b> a wooden bridge over the void, the stardevice and the starjug, and the glowing door out.</span></li>
+    </ol>
+  </div></section>
+
+  <section id="features"><div class="wrap">
+    <span class="plate">MORE</span>
+    <h2>everything else</h2>
+    <div class="feats">
+      <div><h3>co-op for 4</h3><p>host online and send friends a 5 letter code. works from anywhere. on the same wifi, hosts show up in a list. dead players spectate.</p></div>
+      <div><h3>star items</h3><p>the stardevice warns you, the starjug heals and gives a star shield (6 sips), the starhelp runs on your batteries. kept between runs.</p></div>
+      <div><h3>modifiers</h3><p>lights out, rush hour, fragile, nowhere to hide, inflation, and "got any more doors?", which brings rush, ambush, eyes, screech, figure and seek into the office.</p></div>
+      <div><h3>cutscenes</h3><p>your first day, the elevator ride past every floor from w to a, the a-1000 door opening onto the street, and the bus home with the credits.</p></div>
+      <div><h3>the worker's journal</h3><p>8 handwritten pages of backstory that unlock as your best door gets further.</p></div>
+      <div><h3>loot and gold</h3><p>pull out dresser drawers, rob desks, bank gold at the atms in the fixed office. gold carries over between runs.</p></div>
+      <div><h3>saves every door</h3><p>quit whenever. continue from the same room with the same items and health.</p></div>
+      <div><h3>admin panel</h3><p>noclip, god mode, spawn any entity, jump to any door. admin runs keep their own separate progress.</p></div>
+    </div>
+  </div></section>
+
+  <section id="controls"><div class="wrap">
+    <span class="plate">CONTROLS</span>
+    <h2>how to play</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>action</th><th>keyboard / mouse</th><th>gamepad</th><th>touch</th></tr></thead>
+      <tbody>
+        <tr><td>move</td><td><kbd>w</kbd> <kbd>a</kbd> <kbd>s</kbd> <kbd>d</kbd></td><td>left stick</td><td>drag on the left side</td></tr>
+        <tr><td>look</td><td>mouse</td><td>right stick</td><td>drag on the right side</td></tr>
+        <tr><td>sprint</td><td>hold <kbd>shift</kbd></td><td>l3</td><td>run (toggle)</td></tr>
+        <tr><td>crouch</td><td>hold <kbd>c</kbd> or <kbd>ctrl</kbd></td><td>b</td><td>crouch (toggle)</td></tr>
+        <tr><td>interact</td><td><kbd>e</kbd> (hold for exit doors)</td><td>x</td><td>use</td></tr>
+        <tr><td>use item</td><td>left click</td><td>y or rb</td><td>item (tap)</td></tr>
+        <tr><td>pick item</td><td><kbd>1</kbd>–<kbd>4</kbd> or scroll</td><td>dpad left / right</td><td>tap a slot</td></tr>
+        <tr><td>star items</td><td><kbd>5</kbd> <kbd>6</kbd> <kbd>7</kbd></td><td></td><td>tap a slot</td></tr>
+        <tr><td>pause</td><td><kbd>esc</kbd></td><td>start</td><td>||</td></tr>
+      </tbody>
+    </table></div>
+  </div></section>
+</main>
+
+<footer><div class="wrap">
+  <div><b>The ROOMS</b> · made by jhu</div>
+  <div>unofficial fan project. inspired by nicorocks5555's rooms, lsplash's doors and rooms: revisited. not affiliated with any of them or with roblox. entity art and sounds by the doors team and the rooms: revisited team.</div>
+</div></footer>
+
 </body>
 </html>
