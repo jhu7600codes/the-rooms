@@ -128,13 +128,24 @@ function goFull() {
 if (matchMedia("(pointer: coarse)").matches) window.addEventListener("pointerup", goFull, { capture: true });
 
 // ---- offline cache
-// on the very first visit, wait (up to 4s) until the cache worker is in charge, so the big files get saved while they load
+// before the game starts, check (up to 4s) if there's a new version. if there is, the new cache worker takes
+// over first, so this launch already loads the update. offline, it just starts the saved version.
 const roomsSW = new Promise((done) => {
   if (!("serviceWorker" in navigator) || location.protocol === "file:") return done();
-  if (navigator.serviceWorker.controller) { navigator.serviceWorker.register("sw.js").catch(() => {}); return done(); }
   setTimeout(done, 4000);
+  const had = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener("controllerchange", done);
-  navigator.serviceWorker.register("sw.js").catch(done);
+  navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then((reg) => {
+    if (!had) return;  // first visit: wait for the worker to take over (controllerchange)
+    if (reg.installing || reg.waiting) return;  // an update is already on its way
+    reg.update().then(() => { if (!reg.installing && !reg.waiting) done(); }).catch(done);
+  }).catch(done);
+});
+
+// while the game is open (phones keep home screen apps running for days), look for updates when it comes back
+// to the front. a found update is used the next time the game starts.
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && navigator.serviceWorker) navigator.serviceWorker.getRegistration().then((r) => r && r.update()).catch(() => {});
 });
 
 // ---- ios in safari: show the "add to home screen" screen instead of the game
