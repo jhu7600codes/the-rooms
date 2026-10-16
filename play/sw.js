@@ -1,6 +1,6 @@
 // keeps the game on the device after the first load, so it starts fast and works offline.
 // bump VERSION on every new build so players get the update.
-const VERSION = "rooms-1.30.0-b3";
+const VERSION = "rooms-1.30.0-b4";
 // the small files are saved right away. the big ones (index.wasm, index.pck) get saved the first time the game loads them,
 // so nothing downloads twice
 const FILES = ["index.html", "index.js", "index.audio.worklet.js", "index.audio.position.worklet.js",

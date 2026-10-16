@@ -76,7 +76,16 @@ body { overflow: hidden; touch-action: none; overscroll-behavior: none; -webkit-
   const ctxs = [];
   const AC = window.AudioContext || window.webkitAudioContext;
   if (AC) {
-    class Tracked extends AC { constructor(...a) { super(...a); ctxs.push(this); } }
+    // safari on iphone/ipad can go silent when a page asks for its own sample rate (godot asks for 44100,
+    // the hardware runs at 48000), so there we let safari pick the rate
+    const apple = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    class Tracked extends AC {
+      constructor(opts) {
+        if (apple && opts && opts.sampleRate) { opts = Object.assign({}, opts); delete opts.sampleRate; }
+        super(opts);
+        ctxs.push(this);
+      }
+    }
     window.AudioContext = Tracked;
     window.webkitAudioContext = Tracked;
   }
