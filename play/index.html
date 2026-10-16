@@ -141,9 +141,32 @@ const roomsSW = new Promise((done) => {
 const roomsIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const roomsGate = roomsIOS && !roomsStandalone && !location.hash.includes("safari");
 </script>
+<script>
+// russian phones and browsers get the loading and install screens in russian
+const roomsRU = (navigator.language || "").toLowerCase().startsWith("ru");
+if (roomsRU) {
+  document.documentElement.lang = "ru";
+  const T = {
+    ".warn:not(#install .warn)": "ЗДЕСЬ ИСПОЛЬЗУЮТСЯ АССЕТЫ ИЗ DOORS И ROOMS REVISITED!",
+    "#status .note": "неофициальная фанатская игра. благодарности: команда doors и команда rooms: revisited. не связана с roblox. первая загрузка около 70 мб, потом игра работает без интернета.",
+    "#install .warn": "добавь игру на экран «домой», чтобы играть",
+    "#install .note": "оттуда она открывается на весь экран, со звуком, и работает без интернета после первой загрузки.",
+    "#anyway": "всё равно играть в safari",
+    "#rotate div": "поверни телефон горизонтально",
+    "#pct": "загрузка 0%",
+  };
+  for (const sel in T) { const el = document.querySelector(sel); if (el) el.textContent = T[sel]; }
+  const li = document.querySelectorAll("#install li");
+  if (li.length === 3) {
+    li[0].innerHTML = li[0].innerHTML.replace("tap the share button", "нажми кнопку «поделиться»").replace("at the bottom of safari", "внизу safari");
+    li[1].innerHTML = "пролистай вниз и нажми <b>на экран «домой»</b>";
+    li[2].innerHTML = "открой <b>The ROOMS</b> с экрана «домой»";
+  }
+}
+</script>
 <script src="index.js"></script>
 <script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":24040368,"index.wasm":43699190},"focusCanvas":true,"gdextensionLibs":[]};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":24268336,"index.wasm":43699190},"focusCanvas":true,"gdextensionLibs":[]};
 (function () {
   const status = document.getElementById("status");
   const install = document.getElementById("install");
@@ -160,14 +183,14 @@ const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolati
     let last = Date.now();
     const watch = setInterval(() => {
       if (!document.body.contains(status)) { clearInterval(watch); return; }
-      if (Date.now() - last > 45000) { err.hidden = false; err.textContent = "still loading... if it stays stuck, close it and open it again."; }
+      if (Date.now() - last > 45000) { err.hidden = false; err.textContent = roomsRU ? "всё ещё грузится... если зависло, закрой и открой заново." : "still loading... if it stays stuck, close it and open it again."; }
     }, 5000);
     const missing = Engine.getMissingFeatures({ threads: false });
     if (missing.length) { fail(new Error("this browser is missing: " + missing.join(", "))); return; }
     engine.startGame({
       onProgress: (cur, total) => {
         last = Date.now();
-        if (cur > 0 && total > 0) { const p = Math.min(100, Math.round(cur / total * 100)); fill.style.width = p + "%"; pct.textContent = "loading " + p + "%"; }
+        if (cur > 0 && total > 0) { const p = Math.min(100, Math.round(cur / total * 100)); fill.style.width = p + "%"; pct.textContent = (roomsRU ? "загрузка " : "loading ") + p + "%"; }
       },
     }).then(() => status.remove(), fail);
   }
