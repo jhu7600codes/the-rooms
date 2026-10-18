@@ -3,7 +3,7 @@
 // a game update only bumps GAME, so players download the ~24mb game data and keep the ~43mb engine.
 // ENGINE is named after the engine files' md5, so a new godot version gets downloaded once too.
 const ENGINE = "rooms-engine-785eaee5";
-const GAME = "rooms-game-1.34.0";
+const GAME = "rooms-game-1.35.0";
 const ENGINE_FILES = ["index.wasm", "index.js", "index.audio.worklet.js", "index.audio.position.worklet.js"];
 // small files are saved right away, the big ones the first time the game loads them (nothing downloads twice)
 const SMALL = ["index.html", "logo.png", "manifest.webmanifest", "index.icon.png", "icon-180.png", "icon-192.png", "icon-512.png"];
