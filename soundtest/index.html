@@ -65,6 +65,7 @@ footer{border-top:1px solid var(--wall2);padding-block:28px;color:var(--dim);fon
 <script>
 // web audio first (works best on phones), a plain <audio> element if that's not there.
 // everything starts from a tap, which is what mobile browsers need before they make sound
+const V = 2;  // bump when the sounds change, so phones don't keep the old ones
 let ctx = null;
 const buffers = new Map();
 const playing = new Map();
@@ -90,7 +91,7 @@ function stop(k) {
 }
 async function loadBuffer(k) {
   if (buffers.has(k)) return buffers.get(k);
-  const r = await fetch("audio/" + k + ".mp3");
+  const r = await fetch("audio/" + k + ".mp3?v=" + V);
   if (!r.ok) throw new Error("download failed (" + r.status + ")");
   const data = await r.arrayBuffer();
   const buf = await new Promise((ok, bad) => ctx.decodeAudioData(data, ok, bad));
@@ -113,7 +114,7 @@ async function playWeb(k, loop) {
   playing.set(k, { src, gain: g, stop: () => src.stop() });
 }
 function playTag(k, loop) {
-  const a = new Audio("audio/" + k + ".mp3");
+  const a = new Audio("audio/" + k + ".mp3?v=" + V);
   a.loop = loop;
   a.volume = Number(vol.value);
   a.addEventListener("ended", () => stop(k));
